@@ -1,0 +1,15 @@
+{
+  "name": "nginx",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "docker build . -t local/nginx:bionic",
+    "docker": "docker run --rm -d --network=host local/nginx:bionic",
+    "save": "docker save local/nginx:bionic > ../image.tar",
+    "import": "sudo microk8s.ctr -n k8s.io image import ../image.tar"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

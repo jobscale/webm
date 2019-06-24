@@ -1,0 +1,10 @@
+#!/bin/bash -eu
+
+. inst
+
+iNginx
+
+rm /etc/nginx/sites-enabled/default
+rm -fr /etc/nginx/conf.d
+ln -s /var/site/projects/_/etc/nginx/conf.d /etc/nginx
+

@@ -1,11 +1,14 @@
 FROM ubuntu:bionic
 SHELL ["bash", "-c"]
 
-WORKDIR /root
+WORKDIR /var/site
 
 COPY . .
-COPY site /var/site
+
 RUN ./setup
 
 EXPOSE 80
-CMD ["./daemon"]
+
+STOPSIGNAL SIGTERM
+
+CMD ["nginx", "-g", "daemon off;"]

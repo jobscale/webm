@@ -1,5 +1,0 @@
-#!/bin/bash -eu
-
-/etc/init.d/nginx start
-
-tail -f /var/log/lastlog*

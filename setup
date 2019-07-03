@@ -1,10 +1,10 @@
 #!/bin/bash -eu
 
-. inst
+. inst iNginx
 
-iNginx
+git clone https://github.com/jobscale/_.git projects/_
+git clone https://github.com/jobscale/web.git
 
-rm /etc/nginx/sites-enabled/default
+rm -fr /etc/nginx/sites-*
 rm -fr /etc/nginx/conf.d
-ln -s /var/site/projects/_/etc/nginx/conf.d /etc/nginx
-
+ln -sfn /var/site/projects/_/etc/nginx/conf.d /etc/nginx/conf.d

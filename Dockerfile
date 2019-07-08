@@ -1,14 +1,9 @@
-FROM ubuntu:bionic
+FROM jobscale/ubuntu:bionic
 SHELL ["bash", "-c"]
 
-WORKDIR /var/site
+WORKDIR /root
 
-COPY . .
+RUN apt install -y nginx nginx-extras
 
-RUN ./setup
-
-EXPOSE 80
-
-STOPSIGNAL SIGTERM
-
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 80 443
+CMD ["nginx", "daemon off;"]

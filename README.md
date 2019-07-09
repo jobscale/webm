@@ -28,7 +28,7 @@ KUBE_NAMESPACE=default
 KUBE_TOKEN=$(sudo kubectl describe secrets | grep ^token | awk '{print $2}')
 KUBE_HOST=127.0.0.1:16443
 open https://${KUBE_HOST}/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy
-sudo kubectl -ojson get service nginx > ../loadbalancer.json
+sudo kubectl -ojson get service $KUBE_SERVICE > ../loadbalancer.json
 vi ../loadbalancer.json
 https_proxy= curl -k --header "Authorization: Bearer $KUBE_TOKEN" https://${KUBE_HOST}/api/v1/namespaces/${KUBE_NAMESPACE}/services/${KUBE_SERVICE}/status -X PUT -d @../loadbalancer.json -H 'content-type:application/json'
 ```

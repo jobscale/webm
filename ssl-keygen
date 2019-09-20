@@ -1,0 +1,46 @@
+#!/bin/bash -eu
+
+directory=tls
+country=JA
+state=Osaka
+locality=Osaka
+organizational=jsx.jp
+unit=Developpers
+common=*.jsx.jp
+fname=wildcard.jsx.jp
+days=3655
+
+rm -fr $directory
+mkdir $directory
+
+random() {
+  head -c 8 /dev/random | od -x -An | sed -e 's/ //g' | tee ~/.rnd
+}
+
+rsa() {
+  openssl req \
+    -new \
+    -newkey rsa:4096 \
+    -days $days \
+    -nodes \
+    -x509 \
+    -subj "/C=$country/ST=$state/L=$locality/O=$organizational/CN=$common" \
+    -keyout $directory/$fname.key \
+    -out $directory/$fname.cert
+}
+
+ec() {
+  openssl req \
+    -new \
+    -newkey ec \
+    -pkeyopt ec_paramgen_curve:prime256v1 \
+    -days $days \
+    -nodes \
+    -x509 \
+    -subj "/C=$country/ST=$state/L=$locality/O=$organizational/CN=$common" \
+    -keyout $directory/$fname.key \
+    -out $directory/$fname.cert
+}
+
+random
+rsa

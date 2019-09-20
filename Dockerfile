@@ -1,6 +1,7 @@
 FROM nginx
 SHELL ["bash", "-c"]
 WORKDIR /usr/share/nginx
+RUN apt update && apt install -y openssl
 COPY . .
 RUN rm -fr html && ln -sfn public html \
  && . ssl-keygen \

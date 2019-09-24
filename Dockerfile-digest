@@ -9,6 +9,5 @@ RUN digest="$(printf "%s:%s:%s" "$digest_user" "$digest_realm" "$digest_password
  && printf "%s:%s:%s\n" "$digest_user" "$digest_realm" "$digest" | tee -a "/usr/local/apache2/passwd.digest"
 RUN rm -fr htdocs && ln -sfn public htdocs \
  && . ssl-keygen \
- && openssl dhparam 2048 > tls/dhparam.pem \
  && cp httpd.conf conf/httpd.conf
 EXPOSE 443 80

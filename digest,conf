@@ -1,0 +1,38 @@
+server_tokens off;
+ssl_protocols TLSv1.3;
+# add_header Strict-Transport-Security 'max-age=31536000; includeSubDomains';
+variables_hash_bucket_size 128;
+add_header X-Backend-Server $hostname;
+
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  listen 443 ssl http2 default_server;
+  listen [::]:443 ssl http2 default_server;
+
+  server_name _;
+
+  root /usr/share/nginx/html;
+
+  index index.html;
+
+  auth_digest_user_file /usr/share/nginx/passwd.digest;
+  location /private {
+    auth_digest 401 'this is not for you';
+  }
+
+  location / {
+    try_files $uri $uri/ $uri.html =404;
+  }
+
+  ssl_certificate /usr/share/nginx/tls/wildcard.jsx.jp.cert;
+  ssl_certificate_key /usr/share/nginx/tls/wildcard.jsx.jp.key;
+  ssl_dhparam /usr/share/nginx/tls/dhparam.pem;
+  ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3;
+  ssl_ciphers EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:AES128+EECDH:AES128+EDH;
+  ssl_prefer_server_ciphers on;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 5m;
+  ssl_stapling on;
+  ssl_stapling_verify on;
+}

@@ -1,0 +1,17 @@
+FROM nginx
+SHELL ["bash", "-c"]
+WORKDIR /usr/share/nginx
+RUN apt update && apt install -y openssl apache2-utils
+COPY . .
+ENV digest_user joi
+ENV digest_realm reaml
+ENV digest_password false
+RUN digest="$(printf "%s:%s:%s" "$digest_user" "$digest_realm" "$digest_password" | md5sum | awk '{print $1}')" \
+ && printf "%s:%s:%s\n" "$user" "$realm" "$digest" | tee -a "/usr/share/nginx/passwd.digest"
+RUN rm -fr html && ln -sfn public html \
+ && . ssl-keygen \
+ && openssl dhparam 2048 > tls/dhparam.pem \
+ && cp nginx.conf /etc/nginx/nginx.conf \
+ && cp digest.conf /etc/nginx/conf.d/default.conf
+EXPOSE 443 80
+CMD ["nginx", "-g", "daemon off;"]

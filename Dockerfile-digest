@@ -1,5 +1,6 @@
 FROM httpd
 SHELL ["bash", "-c"]
+-RUN apt update && apt install -y openssl
 COPY . .
 ENV digest_user joi
 ENV digest_realm reaml

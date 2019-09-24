@@ -10,9 +10,6 @@ common=*.jsx.jp
 fname=server
 days=3655
 
-rm -fr $directory
-mkdir $directory
-
 random() {
   head -c 8 /dev/random | od -x -An | sed -e 's/ //g' | tee ~/.rnd
 }

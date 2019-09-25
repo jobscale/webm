@@ -31,11 +31,11 @@ class Player {
       sourceBuffer.appendBuffer(buf);
     });
   }
-  fetchAB (options, cb) {
+  fetchAB(options, cb) {
     logger.log(options);
     const xhr = new XMLHttpRequest;
     xhr.open('get', options.url);
-    Object.keys(options.headers).forEach(key => {
+    Object.keys(options.headers || {}).forEach(key => {
       xhr.setRequestHeader(key, options.headers[key]);
     });
     xhr.responseType = 'arraybuffer';

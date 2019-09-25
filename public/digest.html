@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+</head>
+<body>
+  <video controls></video>
+  <script src="player.js"></script>
+  <script>
+    (() => {
+      new Player().play('secret/frag_bunny.mp4', 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', {
+        Authorization: 'Digest username="joi", realm="realm", nonce="5U4vDVmTBQA=e13a0476b4d4bcfcea4156633cc1e16f6303896b", uri="/secret/", cnonce="N2JhZWM2MzZjMTRlZGZkY2ZmZDIzNTQzM2U4NGQwZmM=", nc=00000001, qop=auth, response="70527969bfd4249570928305601edf9f", algorithm="MD5"',
+      });
+    })();
+  </script>
+</body>
+</html>

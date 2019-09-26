@@ -24,6 +24,21 @@ class Player {
       logger.error('Unsupported MIME type or codec: ', mimeCodec);
     }
   }
+  actionPlay() {
+    const onPlay = () => {
+      document.querySelector('body').removeEventListener('click', onPlay);
+      logger.info('going play');
+      this.segmentDuration = this.video.duration / this.totalSegments;
+      this.video.play().catch(e => logger.error(e.message));
+    };
+    this.requestedSegments[0] = true;
+    this.video.addEventListener('timeupdate', () => this.checkBuffer());
+    this.video.addEventListener('seeking', pos => this.seek(pos));
+    this.video.addEventListener('canplay', () => {
+      document.querySelector('body').addEventListener('click', onPlay);
+      document.querySelector('body').click();
+    });
+  }
   sourceOpen() {
     this.sourceBuffer = this.mediaSource.addSourceBuffer(this.mimeCodec);
     this.getFileLength({
@@ -38,13 +53,7 @@ class Player {
         url: this.assetURL,
         headers: this.headers,
       }, 0, this.segmentLength, chank => this.appendSegment(chank));
-      this.requestedSegments[0] = true;
-      this.video.addEventListener('timeupdate', () => this.checkBuffer());
-      this.video.addEventListener('canplay', () => {
-        this.segmentDuration = this.video.duration / this.totalSegments;
-        this.video.play().catch(e => logger.error(e.message));
-      });
-      this.video.addEventListener('seeking', pos => this.seek(pos));
+      this.actionPlay();
     });
   }
   getFileLength(options, cb) {
@@ -77,6 +86,7 @@ class Player {
     this.sourceBuffer.appendBuffer(chunk);
   }
   checkBuffer() {
+    if (this.mediaSource.readyState === 'ended') return;
     const currentSegment = this.getCurrentSegment();
     if (currentSegment === this.totalSegments && this.haveAllSegments()) {
       logger.log('last segment', this.mediaSource.readyState);
@@ -85,7 +95,10 @@ class Player {
     } else if (this.shouldFetchNextSegment(currentSegment)) {
       this.requestedSegments[currentSegment] = true;
       console.log('time to fetch next chunk', this.video.currentTime);
-      this.fetchRange(this.assetURL, this.bytesFetched, this.bytesFetched + this.segmentLength, chank => this.appendSegment(chank));
+      this.fetchRange({
+        url: this.assetURL,
+        headers: this.headers,
+      }, this.bytesFetched, this.bytesFetched + this.segmentLength, chank => this.appendSegment(chank));
     }
     // logger.log(video.currentTime, currentSegment, this.segmentDuration);
   }
@@ -108,6 +121,7 @@ class Player {
     });
   }
   shouldFetchNextSegment(currentSegment) {
+    if (currentSegment > this.totalSegments) return false;
     return this.video.currentTime > this.segmentDuration * currentSegment * 0.8 &&
       !this.requestedSegments[currentSegment];
   }

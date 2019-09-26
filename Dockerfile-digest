@@ -12,3 +12,4 @@ RUN rm -fr htdocs && ln -sfn public htdocs \
  && . ssl-keygen \
  && cp httpd.conf conf/httpd.conf
 EXPOSE 443 80
+CMD ["bash", "-c", "httpd && tail -f logs/httpd.pid"]

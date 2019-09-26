@@ -2,17 +2,16 @@
 <html>
 <head>
   <meta charset="utf-8"/>
+  <link href="/app.css" rel="stylesheet" type="text/css">
 </head>
 <body>
 <video controls></video>
-<script src="../player.js"></script>
+<script src="/player.js"></script>
 <script>
   (() => {
-    const auth = btoa(new Uint8Array('joi:false'.split('')));
     new Player().play(
       'frag_bunny.mp4',
       'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
-      { Authorization: "Basic ${auth}" },
     );
   })();
 </script>

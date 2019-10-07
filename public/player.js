@@ -1,23 +1,25 @@
 const logger = console;
+logger.json = (...argv) => {
+  if (argv.length === 1) return logger.info(JSON.stringify(argv[0], null, 2));
+  logger.info(JSON.stringify({ argv }, null, 2));
+};
 
 class Player {
   constructor(video) {
     this.video = video || document.querySelector('video');
-    this.totalSegments = 5;
+    this.fastLength = 5 * 1024 * 1024;
+    this.totalSegments = 0;
     this.segmentLength = 0;
-    this.segmentDuration = 0;
+    this.segmentDuration = 5;
     this.bytesFetched = 0;
     this.requestedSegments = [];
   }
   play(assetURL, mimeCodec, headers) {
-    // const mimeCodec = 'video/webm; codecs="vp8,vorbis"';
     this.assetURL = assetURL || 'frag_bunny.mp4';
     this.mimeCodec = mimeCodec || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
     this.headers = headers || {};
-    for (let i = 0; i < this.totalSegments; ++i) this.requestedSegments[i] = false;
     if ('MediaSource' in window && MediaSource.isTypeSupported(mimeCodec)) {
-      this.mediaSource = new MediaSource;
-      // logger.log(this.mediaSource.readyState); // closed
+      this.mediaSource = new MediaSource();
       this.video.src = URL.createObjectURL(this.mediaSource);
       this.mediaSource.addEventListener('sourceopen', () => this.sourceOpen());
     } else {
@@ -28,16 +30,25 @@ class Player {
     const onPlay = () => {
       document.querySelector('body').removeEventListener('click', onPlay);
       logger.info('going play');
-      this.segmentDuration = this.video.duration / this.totalSegments;
       this.video.play().catch(e => logger.error(e.message));
     };
-    this.requestedSegments[0] = true;
-    this.video.addEventListener('timeupdate', () => this.checkBuffer());
-    this.video.addEventListener('seeking', pos => this.seek(pos));
-    this.video.addEventListener('canplay', () => {
+    const canPlay = () => {
+      this.video.removeEventListener('canplay', canPlay);
+      this.totalSegments = Math.ceil(this.video.duration / this.segmentDuration);
+      this.segmentLength = Math.ceil(this.fileLength / this.totalSegments);
+      logger.json({
+        segmentLength: this.segmentLength,
+        fileLength: this.fileLength,
+        totalSegments: this.totalSegments,
+        videoDuration: this.video.duration,
+        segmentDuration: this.segmentDuration,
+      });
+      this.video.addEventListener('timeupdate', () => this.checkBuffer());
+      this.video.addEventListener('seeking', pos => this.seek(pos));
       document.querySelector('body').addEventListener('click', onPlay);
-      document.querySelector('body').click();
-    });
+      // document.querySelector('body').click();
+    };
+    this.video.addEventListener('canplay', canPlay);
   }
   sourceOpen() {
     this.sourceBuffer = this.mediaSource.addSourceBuffer(this.mimeCodec);
@@ -46,13 +57,11 @@ class Player {
       headers: this.headers,
     }, fileLength => {
       logger.log((fileLength / 1024 / 1024).toFixed(2), 'MB');
-      // totalLength = fileLength;
-      this.segmentLength = Math.round(fileLength / this.totalSegments);
-      // logger.log(totalLength, this.segmentLength);
+      this.fileLength = fileLength;
       this.fetchRange({
         url: this.assetURL,
         headers: this.headers,
-      }, 0, this.segmentLength, chank => this.appendSegment(chank));
+      }, 0, this.fastLength - 1, chank => this.appendSegment(chank));
       this.actionPlay();
     });
   }
@@ -68,6 +77,12 @@ class Player {
     xhr.send();
   }
   fetchRange(options, start, end, cb) {
+    console.json('time to fetch next chunk', {
+      currentTime: this.video.currentTime,
+      start,
+      end,
+      range: end - start + 1,
+    });
     const xhr = new XMLHttpRequest;
     xhr.open('get', options.url);
     Object.keys(options.headers || {}).forEach(key => {
@@ -76,53 +91,78 @@ class Player {
     xhr.responseType = 'arraybuffer';
     xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
     xhr.onload = () => {
-      logger.log('fetched bytes: ', start, end);
-      this.bytesFetched += end - start + 1;
       cb(xhr.response);
     };
     xhr.send();
   }
-  appendSegment(chunk) {
-    this.sourceBuffer.appendBuffer(chunk);
+  inHead(pos) {
+    return pos < this.fastLength;
+  }
+  fetchSegment(segment, next) {
+    const finish = segment === this.totalSegments && this.haveAllSegments() && this.getCurrentSegment() === this.totalSegments - 1;
+    if (finish) {
+      logger.log('last segment', this.mediaSource.readyState);
+      this.mediaSource.endOfStream();
+      this.video.removeEventListener('timeupdate', () => this.checkBuffer());
+      return Promise.resolve({ status: 'finished.' });
+    }
+    if (!this.shouldFetchSegment(segment)) return Promise.resolve({ status: 'segment exist.' });
+    const promise = {};
+    promise.instance = new Promise((...argv) => {
+      [ promise.resolve, promise.reject ] = argv;
+    });
+    this.requestedSegments[segment] = true;
+    let start = this.segmentLength * segment;
+    let end = this.segmentLength * (segment + 1) - 1;
+    if (this.inHead(end)) return Promise.resolve({ status: 'segment exist.' });
+    if (this.inHead(start)) start = this.fastLength;
+    if (end >= this.fileLength) end = this.fileLength - 1;
+    this.fetchRange({
+      url: this.assetURL,
+      headers: this.headers,
+    }, start, end, chank => {
+      this.appendSegment(chank);
+      promise.resolve({ status: 'ok' });
+    });
+    return promise.instance;
   }
   checkBuffer() {
     if (this.mediaSource.readyState === 'ended') return;
     const currentSegment = this.getCurrentSegment();
-    if (currentSegment === this.totalSegments && this.haveAllSegments()) {
-      logger.log('last segment', this.mediaSource.readyState);
-      this.mediaSource.endOfStream();
-      this.video.removeEventListener('timeupdate', () => this.checkBuffer());
-    } else if (this.shouldFetchNextSegment(currentSegment)) {
-      this.requestedSegments[currentSegment] = true;
-      console.log('time to fetch next chunk', this.video.currentTime);
-      this.fetchRange({
-        url: this.assetURL,
-        headers: this.headers,
-      }, this.bytesFetched, this.bytesFetched + this.segmentLength, chank => this.appendSegment(chank));
-    }
-    // logger.log(video.currentTime, currentSegment, this.segmentDuration);
+    const ahead = async () => {
+      this.inWork = true;
+      const last = Math.min(currentSegment + 8, this.totalSegments + 1);
+      for (let i = 0; i < last; i++) {
+        await this.fetchSegment(i);
+      }
+      delete this.inWork;
+    };
+    if (this.inWork) return;
+    ahead();
   }
-  seek(pos) {
-    logger.log({ pos });
-    if (this.mediaSource.readyState === 'open') {
-      this.sourceBuffer.abort();
-      logger.log(this.mediaSource.readyState);
-    } else {
+  appendSegment(chunk) {
+    this.sourceBuffer.appendBuffer(chunk);
+  }
+  seek(event) {
+    logger.json({
+      readyState: this.mediaSource.readyState,
+      event,
+    });
+    if (this.mediaSource.readyState !== 'open') {
       logger.log('seek but not open?');
-      logger.log(this.mediaSource.readyState);
+      return;
     }
   }
   getCurrentSegment() {
-    return ((this.video.currentTime / this.segmentDuration) | 0) + 1;
+    return Math.floor(this.video.currentTime / this.segmentDuration);
   }
   haveAllSegments() {
     return this.requestedSegments.every(val => {
       return !!val;
     });
   }
-  shouldFetchNextSegment(currentSegment) {
-    if (currentSegment > this.totalSegments) return false;
-    return this.video.currentTime > this.segmentDuration * currentSegment * 0.8 &&
-      !this.requestedSegments[currentSegment];
+  shouldFetchSegment(segment) {
+    if (segment >= this.totalSegments) return false;
+    return !this.requestedSegments[segment];
   }
 }

@@ -10,3 +10,13 @@ main() {
   http_proxy= curl -v http://127.0.0.1
 } && main
 ```
+
+### Generate Video
+
+```
+docker pull jobscale/mp4box
+cat README.md
+
+ffmpeg -i ${INPUT} -c:v h264 -c:a aac -frag_duration 5 -movflags empty_moov+default_base_moof+frag_keyframe+faststart ${OUTPUT}
+MP4Box -dash 5000 ${OUTPUT}
+```

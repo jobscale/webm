@@ -1,7 +1,7 @@
 #### run with container
 
 ```bash
-git clone git@github.com:jobscale/webm.git
+git clone https://github.com/jobscale/webm.git
 cd webm
 main() {
   docker build . -t local/webm:0.0.1
